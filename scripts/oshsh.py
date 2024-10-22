@@ -215,29 +215,34 @@ def main():
 
 def extract_dependencies(manifest_data, top_manifest, work):
     def _extract(manifest, collected_deps):
-        for lib_name, modules in manifest.get("dependencies", {}).items():
+        logger.info(f"Extracting dependencies for {manifest.get('module')}")
+
+        deps = manifest.get("dependencies", {}).items()
+
+        for lib_name, modules in deps:
+            # Replace 'work' with the provided work parameter
+            if lib_name == "work":
+                lib_name = work
             for module in modules:
+                if (lib_name, module) not in collected_deps:
+                    logger.info(f"Processing dependency {module} in library {lib_name}")
 
-                # Replace 'work' with the provided work parameter
-                if lib_name == "work":
-                    lib_name = work
+                    dep_tuple = (lib_name, module)
 
-                dep_tuple = (lib_name, module)
+                    if dep_tuple not in collected_deps:  # Avoid circular dependencies
+                        # Find the manifest for the dependency module
+                        dep_manifest = next(
+                            (m for m in manifest_data if m.get("module") == module),
+                            None,
+                        )
+                        if dep_manifest:
+                            _extract(dep_manifest, collected_deps)
 
-                if dep_tuple not in collected_deps:  # Avoid circular dependencies
-                    module_deps = []
-                    # Find the manifest for the dependency module
-                    dep_manifest = next(
-                        (m for m in manifest_data if m.get("module") == module), None
-                    )
-                    if dep_manifest:
-                        module_deps = _extract(dep_manifest, collected_deps)
+                    collected_deps.append(dep_tuple)
 
-                    module_deps.append(dep_tuple)
-                    collected_deps = collected_deps + module_deps
-        return collected_deps
-
-    return _extract(top_manifest, [])
+    collected_deps = []
+    _extract(top_manifest, collected_deps)
+    return collected_deps
 
 
 def validate_top_dir(top_dir):
