@@ -33,6 +33,15 @@ logger = logging.getLogger(__name__)
 valid_verilog_endings = [".v", ".sv", ".svp"]
 valid_vhdl_endings = [".vhd", ".vhdl", ".vo"]
 
+EXIT_SUCCESS = 0
+EXIT_UNEXPECTED_ERROR = 1
+EXIT_FILE_ERROR = 2
+EXIT_JSON_ERROR = 3
+EXIT_MODULE_NOT_FOUND = 4
+EXIT_INVALID_TOP_DIR = 5
+EXIT_MANIFEST_NOT_FOUND = 6
+EXIT_MISSING_FILES = 7
+
 
 def main():
     cwd = pathlib.Path.cwd()
@@ -75,7 +84,7 @@ def main():
     if not validate_top_dir(top_dir):
         error_message = f"The specified top-level directory {top_dir} does not exist or is not a directory."
         logger.error(error_message)
-        exit(5)
+        exit(EXIT_INVALID_TOP_DIR)
 
     # Find all files named "manifest.json" in the current working directory
     all_manifest_files = discover_manifests(top_dir)
@@ -91,13 +100,13 @@ def main():
                 logger.debug(f"Parsed manifest file: {manifest_file}")
         except json.JSONDecodeError as e:
             logger.error(f"Error parsing JSON from {manifest_file}: {e}")
-            exit(3)
+            exit(EXIT_JSON_ERROR)
         except (OSError, IOError) as e:
             logger.error(f"File error reading {manifest_file}: {e}")
-            exit(2)
+            exit(EXIT_FILE_ERROR)
         except Exception as e:
             logger.error(f"Unexpected error reading {manifest_file}: {e}")
-            exit(1)
+            exit(EXIT_UNEXPECTED_ERROR)
 
     # Check if the specified module is found within the list of manifests
     module_found = False
@@ -110,7 +119,7 @@ def main():
     if not module_found:
         error_message = f"The specified module {module} was not found in any manifest."
         logger.error(error_message)
-        exit(4)
+        exit(EXIT_MODULE_NOT_FOUND)
     else:
         logger.info(f"Found module {module} in manifest.")
 
@@ -158,7 +167,7 @@ def main():
                 }
         else:
             logger.error(f"Manifest for module {module} not found.")
-            exit(6)
+            exit(EXIT_MANIFEST_NOT_FOUND)
 
     # Remove duplicate source files while preserving order within each library
     for lib_name, sources in source_files_by_lib.items():
@@ -178,7 +187,7 @@ def main():
     if missing_files:
         error_message = f"The following source files do not exist: {missing_files}"
         logger.error(error_message)
-        exit(7)
+        exit(EXIT_MISSING_FILES)
 
     # Print the final source file list for each library in order
     for lib_name, source_files in source_files_by_lib.items():
