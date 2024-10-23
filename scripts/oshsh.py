@@ -88,7 +88,7 @@ def main():
                 data = json.load(file)
                 data["manifest_path"] = str(manifest_file.resolve())
                 manifest_data.append(data)
-                logger.info(f"Parsed manifest file: {manifest_file}")
+                logger.debug(f"Parsed manifest file: {manifest_file}")
         except json.JSONDecodeError as e:
             logger.error(f"Error parsing JSON from {manifest_file}: {e}")
             exit(3)
@@ -119,7 +119,7 @@ def main():
 
     # Remove duplicate entries
     dependencies = list(dict.fromkeys(dependencies))
-    logger.info(f"Dependencies for module {module}: {dependencies}")
+    logger.debug(f"Dependencies for module {module}: {dependencies}")
 
     # Append the top manifest module with the work library to the dependencies list
     dependencies.append((work, module))
@@ -160,17 +160,25 @@ def main():
             logger.error(f"Manifest for module {module} not found.")
             exit(6)
 
-    # # Remove duplicate source files while preserving order within each library
-    # for lib_name in source_files_by_lib:
-    #     source_files_by_lib[lib_name]["verilog"] = list(
-    #         dict.fromkeys(source_files_by_lib[lib_name]["verilog"])
-    #     )
-    #     source_files_by_lib[lib_name]["vhdl"] = list(
-    #         dict.fromkeys(source_files_by_lib[lib_name]["vhdl"])
-    #     )
-    #     logger.info(
-    #         f"Source files for library {lib_name}: Verilog: {source_files_by_lib[lib_name]['verilog']}, VHDL: {source_files_by_lib[lib_name]['vhdl']}"
-    #     )
+    # Remove duplicate source files while preserving order within each library
+    for lib_name, sources in source_files_by_lib.items():
+        sources["verilog"] = list(dict.fromkeys(sources["verilog"]))
+        sources["vhdl"] = list(dict.fromkeys(sources["vhdl"]))
+        logger.debug(
+            f"Source files for library {lib_name}: Verilog: {sources['verilog']}, VHDL: {sources['vhdl']}"
+        )
+
+    # Check that all source files exist
+    missing_files = []
+    for lib_name, source_files in source_files_by_lib.items():
+        for source_file in source_files["verilog"] + source_files["vhdl"]:
+            if not pathlib.Path(source_file).exists():
+                missing_files.append(source_file)
+
+    if missing_files:
+        error_message = f"The following source files do not exist: {missing_files}"
+        logger.error(error_message)
+        exit(7)
 
     # Print the final source file list for each library in order
     for lib_name, source_files in source_files_by_lib.items():
@@ -215,7 +223,7 @@ def main():
 
 def extract_dependencies(manifest_data, top_manifest, work):
     def _extract(manifest, collected_deps, current_work):
-        logger.info(f"Extracting dependencies for {manifest.get('module')}")
+        logger.debug(f"Extracting dependencies for {manifest.get('module')}")
 
         deps = manifest.get("dependencies", {}).items()
 
@@ -225,7 +233,9 @@ def extract_dependencies(manifest_data, top_manifest, work):
                 lib_name = current_work
             for module in modules:
                 if (lib_name, module) not in collected_deps:
-                    logger.info(f"Processing dependency {module} in library {lib_name}")
+                    logger.debug(
+                        f"Processing dependency {module} in library {lib_name}"
+                    )
 
                     dep_tuple = (lib_name, module)
 
@@ -260,10 +270,10 @@ def configure_logging():
     logger = logging.getLogger(__name__)
 
     # Set the logging level to INFO
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
 
     # Create a formatter with a nice formatting
-    formatter = logging.Formatter("%(name)s - %(levelname)s - %(message)s")
+    formatter = logging.Formatter("oshsh - %(levelname)s - %(message)s")
 
     # Create a file handler to log to a file
     file_handler = logging.FileHandler("debug.log")
