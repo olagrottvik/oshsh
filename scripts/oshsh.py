@@ -214,15 +214,15 @@ def main():
 
 
 def extract_dependencies(manifest_data, top_manifest, work):
-    def _extract(manifest, collected_deps):
+    def _extract(manifest, collected_deps, current_work):
         logger.info(f"Extracting dependencies for {manifest.get('module')}")
 
         deps = manifest.get("dependencies", {}).items()
 
         for lib_name, modules in deps:
-            # Replace 'work' with the provided work parameter
+            # Replace 'work' with the current_work
             if lib_name == "work":
-                lib_name = work
+                lib_name = current_work
             for module in modules:
                 if (lib_name, module) not in collected_deps:
                     logger.info(f"Processing dependency {module} in library {lib_name}")
@@ -236,12 +236,12 @@ def extract_dependencies(manifest_data, top_manifest, work):
                             None,
                         )
                         if dep_manifest:
-                            _extract(dep_manifest, collected_deps)
+                            _extract(dep_manifest, collected_deps, lib_name)
 
                     collected_deps.append(dep_tuple)
 
     collected_deps = []
-    _extract(top_manifest, collected_deps)
+    _extract(top_manifest, collected_deps, work)
     return collected_deps
 
 
