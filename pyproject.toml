@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "oshsh"
+version = "1.0.0"
+description = "Ola's Simple HDL Source Handler"
+authors = [
+    { name="Ola Groettvik" }
+]
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.7"
+
+[project.scripts]
+oshsh = "oshsh.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
